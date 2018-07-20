@@ -36,6 +36,9 @@ extern "C" {
 
 typedef struct BREthereumNodeManagerContext* BREthereumNodeManager;
 
+typedef enum {
+   SUB_PROTO_LES = 0
+}BREthereumSubprotocol;
 
 /**
  * Ehtereum Manager Node Connection Status - Connection states for Manager
@@ -71,6 +74,7 @@ typedef struct {
 extern BREthereumNodeManager
 ethereumNodeManagerCreate(BREthereumNetwork network,
                           BRKey* key,
+                          BREthereumSubprotocol protocool,
                           BREthereumHash headHash,
                           uint64_t headNumber,
                           UInt256 headTotalDifficulty,

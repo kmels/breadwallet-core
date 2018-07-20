@@ -148,7 +148,7 @@ struct BREthereumNodeContext {
     BREthereumDisconnect disconnectReason;
     
     //The information about the P2P context for this node;
-    BREthereumP2PHello helloData;
+    BREthereumP2PHello* helloData;
 };
 
 
@@ -316,18 +316,6 @@ static BREthereumBoolean _isP2PMessage(BREthereumNode node, BRRlpCoder rlpCoder,
     }
     return retStatus;
 }
-static void _releaseHelloResources(BREthereumNode node) {
-
-    if(node->helloData.clientId != NULL) {
-        free(node->helloData.clientId);
-    }
-    if(node->helloData.caps != NULL) {
-        for(int i = 0; i < array_count(node->helloData.caps); i++){
-            free(node->helloData.caps[i].cap);
-        }
-        array_free(node->helloData.caps);
-    }
-}
 static int _readMessage(BREthereumNode node) {
 
     eth_log(ETH_LOG_TOPIC, "%s", "reading message from peer");
@@ -489,6 +477,7 @@ BREthereumNode ethereumNodeCreate(BREthereumPeerConfig config,
                                   BRKey* key,
                                   UInt256* nonce,
                                   BRKey* ephemeral,
+                                  BREthereumP2PHello* helloData,
                                   BREthereumManagerCallback callbacks,
                                   BREthereumBoolean originate) {
 
@@ -505,23 +494,7 @@ BREthereumNode ethereumNodeCreate(BREthereumPeerConfig config,
     node->peer.endpoint = config.endpoint;
     node->peer.timestamp = config.timestamp;
     node->peer.remoteKey =  *(config.remoteKey);
-    //Initialize p2p data
-    node->helloData.version = 0x03;
-    char clientId[] = malloc("BRD Light Client");
-    node->helloData.clientId = malloc(strlen(clientId) + 1);
-    strcpy(node->helloData.clientId, clientId);
-    node->helloData.listenPort = 0;
-    array_new(node->helloData.caps, 1);
-    BREthereumCapabilities cap;
-    char capStr[] = "les";
-    cap.cap = malloc(strlen(capStr) + 1);
-    strcpy(cap.cap, capStr);
-    cap.capVersion = 2;
-    array_add(node->helloData.caps, cap);
-    uint8_t pubRawKey[65];
-    size_t pLen = BRKeyPubKey(key, pubRawKey, sizeof(pubRawKey));
-    memcpy(node->helloData.nodeId.u8, &pubRawKey[1], pLen - 1);
-    
+    node->helloData = helloData;    
     node->shouldOriginate = originate;
     //Initiliaze thread information
     {
@@ -593,7 +566,16 @@ void ethereumNodeRelease(BREthereumNode node){
     free(node->key);
     free(node->ephemeral);
     free(node->nonce);
-    _releaseHelloResources(node);
+    if(node->helloData->clientId != NULL) {
+        free(node->helloData->clientId);
+    }
+    if(node->helloData->caps != NULL) {
+        for(int i = 0; i < array_count(node->helloData->caps); i++){
+            free(node->helloData->caps[i].cap);
+        }
+        array_free(node->helloData->caps);
+    }
+    free(node->helloData);
 }
 BREthereumBoolean ethereumNodeEQ(BREthereumNode node1, BREthereumNode node2) {
 
@@ -653,7 +635,7 @@ UInt256* ethereumNodeGetPeerNonce(BREthereumNode node) {
 }
 BRRlpData ethereumNodeRLPP2PHello(BREthereumNode node) {
 
-    return ethereumP2PHelloEncode(&node->helloData);
+    return ethereumP2PHelloEncode(node->helloData);
 }
 int ethereumNodeReadFromPeer(BREthereumNode node, uint8_t * buf, size_t bufSize, const char * type){
 

@@ -402,15 +402,14 @@ lesCreate (BREthereumNetwork network,
         les->announceCtx = announceContext;
         les->announceFunc = announceCallback;
         
-        
-
         //Assign the message id offset for now to be 0x10 since we only support LES
         les->message_id_offset = 0x10;
 
         //Define the Requests Array
         array_new(les->requests,100);
 
-        les->nodeManager = ethereumNodeManagerCreate(network, les->key, headHash, headNumber, les->statusMsg.headerTd, genesisHash, les->callbacks);
+        //Create the node manager
+        les->nodeManager = ethereumNodeManagerCreate(network, les->key, SUB_PROTO_LES, headHash, headNumber, les->statusMsg.headerTd, genesisHash, les->callbacks);
         pthread_mutex_init(&les->lock, NULL);
         ethereumNodeMangerConnect(les->nodeManager);
         

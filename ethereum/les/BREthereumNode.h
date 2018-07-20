@@ -92,6 +92,7 @@ extern BREthereumNode ethereumNodeCreate(BREthereumPeerConfig config,
                                          BRKey* key,
                                          UInt256* nonce,
                                          BRKey* ephemeral,
+                                         BREthereumP2PHello* helloData,
                                          BREthereumManagerCallback callbacks,
                                          BREthereumBoolean originate);
 

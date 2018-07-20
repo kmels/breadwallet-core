@@ -31,6 +31,7 @@
 #include "../blockchain/BREthereumNetwork.h"
 #include "BREthereumEndpoint.h"
 #include "BREthereumRandom.h"
+#include "BREthereumP2PCoder.h"
 #include "../util/BRUtil.h"
 
 struct BREthereumNodeManagerContext {
@@ -65,6 +66,9 @@ struct BREthereumNodeManagerContext {
     //The random context for generating random data
     BREthereumRandomContext randomContext;
 
+    //The capabailities nodes should have
+    BREthereumCapabilities* caps;
+    
     // A lock for the manager context
     pthread_mutex_t lock;
 };
@@ -166,13 +170,37 @@ BREthereumBoolean _findPeers(BREthereumNodeManager manager) {
     }
     return ret;
 }
+static BREthereumNode _makeNodeInstance(BREthereumPeerConfig config, BREthereumNodeManager manager){
 
+    BRKey* nodeKey = (BRKey*)calloc(1,sizeof(BRKey));
+    BRKey* ephemeralKey = (BRKey*)calloc(1,sizeof(BRKey));
+    UInt256* nonce = (UInt256*)calloc(1,sizeof(UInt256));
+    
+    ethereumRandomGenPriKey(manager->randomContext, nodeKey);
+    ethereumRandomGenPriKey(manager->randomContext, ephemeralKey);
+    ethereumRandomGenUInt256(manager->randomContext, nonce);
+    
+    //Initialize p2p data
+    BREthereumP2PHello* helloData = (BREthereumP2PHello*)calloc(1,sizeof(BREthereumP2PHello));
+    helloData->version = 0x03;
+    helloData->clientId = malloc(strlen("BRD Client") + 1);
+    strcpy(helloData->clientId, "BRD Client");
+    helloData->listenPort = 0;
 
+    uint8_t pubRawKey[65];
+    size_t pLen = BRKeyPubKey(nodeKey, pubRawKey, sizeof(pubRawKey));
+    memcpy(helloData->nodeId.u8, &pubRawKey[1], pLen - 1);
+    
+    BREthereumNode node = ethereumNodeCreate(config, nodeKey, nonce, ephemeralKey, helloData, manager->managerCallbacks, ETHEREUM_BOOLEAN_TRUE);
+    
+    return node;
+}
 //
 // Public Functions
 //
 BREthereumNodeManager ethereumNodeManagerCreate(BREthereumNetwork network,
                                                 BRKey* key,
+                                                BREthereumSubprotocol protocool,
                                                 BREthereumHash headHash,
                                                 uint64_t headNumber,
                                                 UInt256 headTotalDifficulty,
@@ -197,6 +225,19 @@ BREthereumNodeManager ethereumNodeManagerCreate(BREthereumNetwork network,
         manager->managerCallbacks.disconnectFunc = _disconnectCallback;
         manager->managerCallbacks.receivedMsgFunc = _receivedMessageCallback;
         manager->managerCallbacks.networkReachableFunc = _networkReachableCallback;
+        
+        //Make the p2p capabilities based off the subprotocool
+        if(protocool == SUB_PROTO_LES){
+            //Create the capabilties for node manager
+            BREthereumCapabilities* caps;
+            array_new(caps, 1);
+            BREthereumCapabilities cap;
+            cap.cap = malloc(strlen("les") + 1);
+            strcpy(cap.cap, "les");
+            cap.capVersion = 2;
+            array_add(caps, cap);
+            manager->caps = caps;
+        }
     }
     return manager;
 }
@@ -239,15 +280,9 @@ int ethereumNodeMangerConnect(BREthereumNodeManager manager) {
             int peerIdx = 0;
             while(array_count(manager->peers) > 0 && array_count(manager->connectedNodes) < ETHEREUM_PEER_MAX_CONNECTIONS)
             {
-                BRKey* nodeKey = (BRKey*)calloc(1,sizeof(BRKey));
-                BRKey* ephemeralKey = (BRKey*)calloc(1,sizeof(BRKey));
-                UInt256* nonce = (UInt256*)calloc(1,sizeof(UInt256));
-            
-                ethereumRandomGenPriKey(manager->randomContext, nodeKey);
-                ethereumRandomGenPriKey(manager->randomContext, ephemeralKey);
-                ethereumRandomGenUInt256(manager->randomContext, nonce);
-            
-                BREthereumNode node = ethereumNodeCreate(manager->peers[peerIdx], nodeKey, nonce, ephemeralKey, manager->managerCallbacks, ETHEREUM_BOOLEAN_TRUE);
+                
+                BREthereumNode node = _makeNodeInstance(manager->peers[peerIdx],manager);
+                
                 if(ethereumNodeConnect(node))
                 {
                    //We could not connect to the remote peer so free the memory

@@ -37,7 +37,6 @@
 extern "C" {
 #endif
 
-
 typedef enum {
     BRE_DISCONNECT_REQUESTED = 0x00, //0x00 Disconnect requested
     BRE_TCP_ERROR,                   //0x01 TCP sub-system error
@@ -53,9 +52,6 @@ typedef enum {
     BRE_TIMEOUT,                     //0x0b Timeout on receiving a message (i.e. nothing received since sending last ping);
     BRE_UNKNOWN                      //0x10 Some other reason specific to a subprotocol.
 }BREthereumDisconnect;
-
-
-
 
 typedef enum {
     BRE_P2P_HELLO      = 0x00,
@@ -76,9 +72,6 @@ typedef struct BREthereumP2PHelloRecord {
       uint64_t listenPort;              // specifies the port that the client is listening on (on the interface that the present connection traverses). If 0 it indicates the client is not listening.
       UInt512 nodeId;                   // nodeId is the Unique Identity of the node and specifies a 512-bit hash that identifies this node.
 }BREthereumP2PHello;
-
-typedef uint64_t BREthereumP2PPing;
-typedef uint64_t BREthereumP2PPong;
 
 
 //Encoded messages
