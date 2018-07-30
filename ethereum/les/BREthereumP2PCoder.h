@@ -95,6 +95,7 @@ extern BRRlpData ethereumP2PPongEncode(void);
 
 //Utils
 extern char* ethereumP2PDisconnectToString(BREthereumDisconnect reason);
+extern void ethereumLogP2PHello(BREthereumP2PHello* message); 
 
 
 #ifdef __cplusplus

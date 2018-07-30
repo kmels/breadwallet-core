@@ -1,3 +1,4 @@
+
   //
 //  BREthereumNode.h
 //  breadwallet-core Ethereum
@@ -448,6 +449,8 @@ BREthereumHandshakeStatus ethereumHandshakeTransition(BREthereumHandshake handsh
         if(ec) {
             return BRE_HANDSHAKE_ERROR;
         }
+        eth_log("ETH_HANDHSAKE","%s", "Printing remote P2P Message");
+        ethereumLogP2PHello(&remoteHello);
         handshake->nextState = BRE_HANDSHAKE_FINISHED;
     }
     return handshake->nextState;

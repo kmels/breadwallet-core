@@ -488,18 +488,26 @@ BREthereumNode ethereumNodeCreate(BREthereumPeerConfig config,
     node->peer.timestamp = config.timestamp;
     node->peer.remoteKey =  *(config.remoteKey);
     //Initialize p2p data
-    node->helloData.version = 0x03;
+    node->helloData.version = 0x05;
     char clientId[] = "BRD Light Client";
     node->helloData.clientId = malloc(strlen(clientId) + 1);
     strcpy(node->helloData.clientId, clientId);
     node->helloData.listenPort = 0;
     array_new(node->helloData.caps, 1);
-    BREthereumCapabilities cap;
+    BREthereumCapabilities lesCap;
     char capStr[] = "les";
-    cap.cap = malloc(strlen(capStr) + 1);
-    strcpy(cap.cap, capStr);
-    cap.capVersion = 2;
-    array_add(node->helloData.caps, cap);
+    lesCap.cap = malloc(strlen(capStr) + 1);
+    strcpy(lesCap.cap, capStr);
+    lesCap.capVersion = 2;
+    array_add(node->helloData.caps, lesCap);
+    
+    BREthereumCapabilities pipCap;
+    char pipCapStr[] = "pip";
+    pipCap.cap = malloc(strlen(capStr) + 1);
+    strcpy(pipCap.cap, pipCapStr);
+    pipCap.capVersion = 1;
+    array_add(node->helloData.caps, pipCap);
+    
     uint8_t pubRawKey[65];
     size_t pLen = BRKeyPubKey(key, pubRawKey, sizeof(pubRawKey));
     memcpy(node->helloData.nodeId.u8, &pubRawKey[1], pLen - 1);

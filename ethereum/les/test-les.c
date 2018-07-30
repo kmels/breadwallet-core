@@ -641,6 +641,35 @@ static void run_GetReceipts_Tests(BREthereumLES les){
     
 }
 
+//
+// Test GetAccountState
+//
+static void _GetAccountState_Callback_Test1 (BREthereumLESAccountStateContext context,
+                                             BREthereumLESAccountStateResult result) {
+    assert (ACCOUNT_STATE_SUCCCESS == result.status);
+    assert (result.u.success.accountState.nonce >= 0);
+    
+    //Signal to the testing thread that this test completed successfully
+    _signalTestComplete();
+}
+
+static void run_GetAccountState_Tests (BREthereumLES les){
+
+    //Initilize testing state
+    _initTest(1);
+    
+    BREthereumAddress address = addressCreate("0x49f4C50d9BcC7AfdbCF77e0d6e364C29D5a660DF");
+    BREthereumHash block_5503921 = hashCreate("0x089a6c0b4b960261287d30ee40b1eea2da2972e7189bd381137f55540d492b2c");
+    BREthereumLESAccountStateCallback context = NULL;
+
+    assert(lesGetAccountState(les, context, _GetAccountState_Callback_Test1, block_5503921, address) == LES_SUCCESS);
+
+    //Wait for tests to complete
+    _waitForTests();
+    
+    eth_log("run_GetAccountState_Tests", "%s", "Tests Successful");
+}
+
 // Test GetProofsV2
 //
 static int _GetProofsV2_Context1 = 0;
@@ -711,10 +740,11 @@ void runLEStests(void) {
     
     // Run Tests on the LES messages
       run_GetTxStatus_Tests(les);
-      run_GetBlockHeaders_Tests(les);
-      run_GetBlockBodies_Tests(les);
-      run_GetReceipts_Tests(les);
+  //    run_GetBlockHeaders_Tests(les);
+  //    run_GetBlockBodies_Tests(les);
+ //     run_GetReceipts_Tests(les);
  //   run_GetProofsV2_Tests(les); //NOTE: The callback function won't be called.
+      run_GetAccountState_Tests(les);
     //reallySendLESTransaction(les);
     
     printf ("Done\n");

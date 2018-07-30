@@ -49,6 +49,8 @@ typedef enum {
   BRE_LES_ID_GET_TX_STATUS   = 0x14,
   BRE_LES_ID_TX_STATUS       = 0x15,
   BRE_LES_ID_GET_BLOCK_BODIES = 0x04,
+  BRE_PIP_ID_REQUEST          = 0x02,
+  BRE_PIP_ID_RESPONSE         = 0x03,
   BRE_LES_ID_BLOCK_BODIES     = 0x05,
   BRE_LES_ID_GET_BLOCK_HEADERS = 0x02,
   BRE_LES_ID_BLOCK_HEADERS = 0x03,
@@ -171,6 +173,25 @@ extern BRRlpData ethereumLESGetProofsV2(uint64_t message_id_offset, uint64_t req
 extern BRRlpData ethereumLESGetTxStatus(uint64_t message_id_offset, uint64_t reqId, BREthereumHash* transactions);
 extern BREthereumLESDecodeStatus ethereumLESDecodeTxStatus(uint8_t*rlpBytes, size_t rlpBytesSize, uint64_t* reqId, uint64_t* bv, BREthereumTransactionStatus** replies, size_t* repliesCount);
 
+
+//
+// Pip (Parity) related coder funcutions
+//
+
+typedef struct {
+//        [U8](U8) // merkle inclusion proof from state trie
+//        U // nonce
+//        U // balance
+    uint8_t* merkleProofState;
+    uint64_t nonce;
+    uint64_t balance;
+    UInt256 codeHash;
+    UInt256 storageRoot; // storage root
+
+} BREthereumPipResponse;
+
+extern BRRlpData ethereumPipAccountRequest(uint64_t message_id_offset, uint64_t reqId, BREthereumHash block, BREthereumAddress address);
+extern BREthereumLESDecodeStatus ethereumPipDecodeAccountResponse(uint8_t*rlpBytes, size_t rlpBytesSize, uint64_t* reqId, uint64_t* cr, BREthereumPipResponse* response);
 
 #ifdef __cplusplus
 }

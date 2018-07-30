@@ -803,6 +803,82 @@ BREthereumLESDecodeStatus ethereumLESDecodeTxStatus(uint8_t*rlpBytes, size_t rlp
     return BRE_LES_CODER_SUCCESS;
 
 }
+
+//
+// Pip (Parity) related coder funcutions
+//
+
+extern BRRlpData ethereumPipAccountRequest(uint64_t message_id_offset, uint64_t reqId, BREthereumHash block, BREthereumAddress address){
+
+    BRRlpCoder coder = rlpCoderCreate();
+    BRRlpItem items[2];
+    int idx = 0;
+
+    // [ID, [input_0, input_1, ...]]
+    BRRlpItem requestItems[2];
+    requestItems[0] = rlpEncodeItemUInt64(coder, 0x05,1);
+
+    // Request for proof of specific account in the state.
+    /* Request::Account {
+    ID: 5
+    Inputs:
+        Loose(H256) // block hash
+        Loose(H256) // address hash
+    Outputs:
+        [U8](U8) // merkle inclusion proof from state trie
+        U // nonce
+        U // balance
+        H256 reusable_as(0) // code hash
+        H256 reusable_as(1) // storage root
+    }
+    */
+    BRRlpItem accountRequestItems[2];
+    
+    BRRlpItem looseBlockHash[2];
+    looseBlockHash[0] = rlpEncodeItemUInt64(coder, 0,1);       // discriminant == 0
+    looseBlockHash[1] = rlpEncodeItemBytes(coder, block.bytes, sizeof(block.bytes)); //data == blockHash
+    
+    BRRlpItem looseAddressHash[2];
+    looseAddressHash[0] = rlpEncodeItemUInt64(coder, 0,1);       // discriminant == 0
+    UInt256 addressHash;
+    memset(addressHash.u8, 0, sizeof(addressHash.u8));
+    memcpy(addressHash.u8, address.bytes, sizeof(address.bytes));
+    looseAddressHash[1] = rlpEncodeItemBytes(coder, addressHash.u8, sizeof(addressHash.u8)); //data == addressHash
+    
+    accountRequestItems[0] = rlpEncodeListItems(coder, looseBlockHash, 2);
+    accountRequestItems[1] = rlpEncodeListItems(coder, looseAddressHash, 2);
+
+    requestItems[1] = rlpEncodeListItems(coder, accountRequestItems, 2);
+
+    
+    // request[0] = [ID, [input_0, input_1, ...]]
+    BRRlpItem request[1];
+    request[0] = rlpEncodeListItems(coder, requestItems, 2);
+
+    //[+0x02, req_id: U, [req_1, req_2, …]]
+    items[idx++] = rlpEncodeItemUInt64(coder, reqId,1);
+    items[idx++] = rlpEncodeListItems(coder, request, 1);
+    
+    BRRlpItem encoding = rlpEncodeListItems(coder, items, idx);
+    
+    BRRlpData messageListData;
+    
+    rlpDataExtract(coder, encoding, &messageListData.bytes, &messageListData.bytesCount);
+    
+    BRRlpData retData = _encodePayloadId(coder, messageListData, message_id_offset + BRE_PIP_ID_REQUEST);
+    
+    rlpCoderRelease(coder);
+    rlpDataRelease(messageListData);
+
+    return retData;
+
+
+
+}
+extern BREthereumLESDecodeStatus ethereumPipDecodeAccountResponse(uint8_t*rlpBytes, size_t rlpBytesSize, uint64_t* reqId, uint64_t* cr, BREthereumPipResponse* response) {
+
+    return BRE_LES_CODER_SUCCESS;
+}
 /* 
 void ethereumLESTxStatus( uint64_t reqId, uint64_t bv, BREthereumTransactionStatusLES* replies, size_t repliesCount, uint8_t**rlpBytes, size_t* rlpBytesSize){
 

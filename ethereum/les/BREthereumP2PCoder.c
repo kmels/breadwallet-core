@@ -264,3 +264,18 @@ extern char* ethereumP2PDisconnectToString(BREthereumDisconnect reason) {
     break;
     }
 }
+extern void ethereumLogP2PHello(BREthereumP2PHello* message) {
+
+    char* topic = "P2P Message";
+    eth_log(topic, "Version:%llu", message->version);
+    eth_log(topic, "Client id:%s", message->clientId);
+    eth_log(topic, "%s", "Capabilities:");
+    for(int i  = 0; i < array_count(message->caps); i++){
+         eth_log(topic, "\t[Capability:%s, Version:%llu]", message->caps[i].cap, message->caps[i].capVersion);
+    }
+    eth_log(topic, "Listen Port:%llu", message->listenPort);
+    size_t size = 0;
+    char * nodeIdStr = encodeHexCreate(&size, message->nodeId.u8, 64);
+    eth_log(topic, "Node id:%s", nodeIdStr);
+    free(nodeIdStr); 
+}

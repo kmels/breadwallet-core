@@ -76,6 +76,13 @@ typedef struct {
         BREthereumLESProofsV2Context context;
         BREthereumProofsRequest* proofRequests;
      }proofsV2;
+     
+    struct {
+        BREthereumLESAccountStateCallback callback;
+        BREthereumLESAccountStateContext context;
+        BREthereumLESAccountStateResult result;
+     }account;
+     
   }u;
 }LESRequestRecord;
 
@@ -119,6 +126,7 @@ static void _receivedMessageCallback(BREthereumSubProtoContext info, uint64_t me
     {
         case BRE_LES_ID_STATUS:
         {
+            rlpShow(messageBody, "DEBUG_STATUS");
             BREthereumLESDecodeStatus remoteStatus = ethereumLESDecodeStatus(messageBody.bytes, messageBody.bytesCount, &les->peerStatus);
             if(remoteStatus == BRE_LES_CODER_SUCCESS)
             {
@@ -177,6 +185,13 @@ static void _receivedMessageCallback(BREthereumSubProtoContext info, uint64_t me
             }
         }
         break;
+        case BRE_PIP_ID_RESPONSE:
+        {
+            rlpShow(messageBody, "PIP-RESPONSE");
+
+        
+        }
+        break;/*
         case BRE_LES_ID_BLOCK_HEADERS:
         {
 //            rlpShow(messageBody, "LES-HEADERS");
@@ -208,6 +223,7 @@ static void _receivedMessageCallback(BREthereumSubProtoContext info, uint64_t me
     
         }
         break;
+        */
         case BRE_LES_ID_BLOCK_BODIES:
         {
            // rlpShow(messageBody, "LES-BODIES");
@@ -279,6 +295,13 @@ static void _receivedMessageCallback(BREthereumSubProtoContext info, uint64_t me
                 array_free(receipts);
             }
            
+        }
+        break;
+        
+        //TODO: GENERALIZE THIS TO WORK WITH PIPS Messages
+        case BRE_PIP_ID_REQUEST:
+        {
+        
         }
         break;
         case BRE_LES_ID_PROOFS_V2:
@@ -383,7 +406,7 @@ lesCreate (BREthereumNetwork network,
         les->network = network;
         
         /*** Define the status message **/
-        les->statusMsg.protocolVersion = 0x02;
+        les->statusMsg.protocolVersion = 0x01; //TODO: CHANGED THIS FOR PIP but should be 2 for GETH LES
         les->statusMsg.chainId = networkGetChainId(network);
         les->statusMsg.headerTd = headTotalDifficulty;
         memcpy(les->statusMsg.headHash, headHash.bytes, 32);
@@ -403,8 +426,6 @@ lesCreate (BREthereumNetwork network,
         les->announceCtx = announceContext;
         les->announceFunc = announceCallback;
         
-        
-
         //Assign the message id offset for now to be 0x10 since we only support LES
         les->message_id_offset = 0x10;
 
@@ -584,6 +605,93 @@ lesGetReceiptsOne (BREthereumLES les,
     
     return status;
 }
+
+extern BREthereumLESStatus
+lesGetAccountState (BREthereumLES les,
+                    BREthereumLESAccountStateContext context,
+                    BREthereumLESAccountStateCallback callback,
+                    BREthereumHash block,
+                    BREthereumAddress address) {
+    // For Parity:
+    //    // Request for proof of specific account in the state.
+    //    Request::Account {
+    //    ID: 5
+    //    Inputs:
+    //        Loose(H256) // block hash
+    //        Loose(H256) // address hash
+    //    Outputs:
+    //        [U8](U8) // merkle inclusion proof from state trie
+    //        U // nonce
+    //        U // balance
+    //        H256 reusable_as(0) // code hash
+    //        H256 reusable_as(1) // storage root
+    //    }
+
+    // For GETH:
+    //    Use GetProofs, then process 'nodes'
+
+    // For NOW: return 'success' with some random data
+  /*  static BREthereumAccountState state = EMPTY_ACCOUNT_STATE_INIT;
+
+
+
+
+#define ACCOUNT_RANDOM_PERIOD 25
+    long randomValue = random ();
+    int needNonce = 1 == randomValue % ACCOUNT_RANDOM_PERIOD;
+    int needEther = 3 == randomValue % ACCOUNT_RANDOM_PERIOD;
+
+    if (needNonce) state.nonce++;
+    if (needEther) { int overflow; state.balance = etherAdd(state.balance, etherCreateNumber(1, WEI), &overflow); }
+
+    BREthereumLESAccountStateResult result = {
+        ACCOUNT_STATE_SUCCCESS,
+        { .success = {
+            block,
+            address,
+            state
+        }}
+    };
+
+    callback (context, result);
+   */
+    
+    BREthereumBoolean shouldSend;
+
+    pthread_mutex_lock(&les->lock);
+    uint64_t reqId = les->requestIdCount++;
+    shouldSend = les->startSendingMessages;
+    pthread_mutex_unlock(&les->lock);
+    
+    if(ETHEREUM_BOOLEAN_IS_TRUE(shouldSend)) {
+    
+        LESRequestRecord record;
+        record.requestId = reqId;
+        record.u.account.callback = callback;
+        record.u.account.context = context;
+        memcpy(record.u.account.result.u.success.address.bytes,
+               address.bytes, sizeof(address.bytes));
+        memcpy(record.u.account.result.u.success.block.bytes,
+               block.bytes, sizeof(block.bytes));
+        
+        pthread_mutex_unlock(&les->lock);
+        array_add(les->requests, record);
+        pthread_mutex_unlock(&les->lock);
+        
+        BRRlpData accountData = ethereumPipAccountRequest(les->message_id_offset, reqId, block, address);
+        
+        BREthereumLESStatus status =  _sendMessage(les, BRE_PIP_ID_REQUEST, accountData);
+        rlpDataRelease(accountData);
+        return status;
+    }
+    else {
+        return LES_NETWORK_UNREACHABLE;
+    }
+
+    
+    
+}
+
 extern BREthereumLESStatus
 lesGetGetProofsV2One (BREthereumLES les,
                      BREthereumLESProofsV2Context context,
