@@ -126,6 +126,10 @@ static void _receivedMessageCallback(BREthereumSubProtoContext info, uint64_t me
     {
         case BRE_LES_ID_STATUS:
         {
+            size_t size = 0;
+            
+            messageBody.bytes = &messageBody.bytes[4];
+            messageBody.bytesCount -= 4;
             rlpShow(messageBody, "DEBUG_STATUS");
             BREthereumLESDecodeStatus remoteStatus = ethereumLESDecodeStatus(messageBody.bytes, messageBody.bytesCount, &les->peerStatus);
             if(remoteStatus == BRE_LES_CODER_SUCCESS)

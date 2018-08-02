@@ -730,7 +730,7 @@ void runLEStests(void) {
     BREthereumLES les = lesCreate(ethereumMainnet, NULL, _announceCallback, headHash, headNumber, headTD, genesisHash);
     
     // Sleep for a little bit to allow the context to connect to the network
-    sleep(5);
+    sleep(60);
     
     //Initialize testing state
     _initTestState();

@@ -345,6 +345,9 @@ static int _readMessage(BREthereumNode node) {
         return 1;
     }*/ 
     
+    //For PARITY they include the protocol id
+    
+    
     uint32_t fullFrameSize = frameSize + ((16 - (frameSize % 16)) % 16) + 16;
     
     if(node->body == NULL){
@@ -440,6 +443,9 @@ static void *_nodeThreadRunFunc(void *arg) {
                     //Read message from peer
                     if(!_readMessage(node))
                     {
+                        size_t size = 0;
+                        eth_log("BYTES", "%s\nSize=%zu, Size=%zu" , encodeHexCreate(&size, node->body, node->bodySize), node->bodySize, size);
+                        
                         //Decode the Packet Type
                         BRRlpCoder rlpCoder = rlpCoderCreate();
                         BRRlpData framePacketTypeData = {1, node->body};
@@ -447,6 +453,8 @@ static void *_nodeThreadRunFunc(void *arg) {
     
                         uint64_t packetType = rlpDecodeItemUInt64(rlpCoder, item, 1);
                         BRRlpData mesageBody = {node->bodySize - 1, &node->body[1]};
+                        
+                        
                         
                         //Check if the message is a P2P message before broadcasting the message to the manager
                         if(ETHEREUM_BOOLEAN_IS_FALSE(_isP2PMessage(node,rlpCoder,packetType, mesageBody)))
