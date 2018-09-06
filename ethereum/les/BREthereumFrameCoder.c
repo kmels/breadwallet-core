@@ -338,10 +338,10 @@ BREthereumBoolean ethereumFrameCoderInit(BREthereumFrameCoder fcoder,
 }
 
 void ethereumFrameCoderRelease(BREthereumFrameCoder fcoder) {
-    array_free(fcoder->aesDecryptKey);
-    array_free(fcoder->aesEncryptKey);
-    array_free(fcoder->egressMac);
-    array_free(fcoder->ingressMac);
+    if (NULL != fcoder->aesDecryptKey) array_free(fcoder->aesDecryptKey);
+    if (NULL != fcoder->aesEncryptKey) array_free(fcoder->aesEncryptKey);
+    if (NULL != fcoder->egressMac) array_free(fcoder->egressMac);
+    if (NULL != fcoder->ingressMac) array_free(fcoder->ingressMac);
     free(fcoder);
 }
 void ethereumFrameCoderEncrypt(BREthereumFrameCoder fCoder, uint8_t* payload, size_t payloadSize, uint8_t** rlpBytes, size_t * rlpBytesSize) {
